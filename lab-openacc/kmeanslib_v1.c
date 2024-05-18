@@ -240,55 +240,58 @@ void kmeans(uint8_t k, cluster *centroides, uint32_t num_pixels, rgb *pixels)
     // K-means iterative procedures start
     printf("STEP 3: Updating centroids\n\n");
     i = 0;
-    do
+#pragma acc data copyin(pixels[0:num_pixels])
     {
-        // Reset centroids
-        for (j = 0; j < k; j++)
+        do
         {
-            centroides[j].media_r = 0;
-            centroides[j].media_g = 0;
-            centroides[j].media_b = 0;
-            centroides[j].num_puntos = 0;
-        }
-
-        // Find closest cluster for each pixel
-        uint8_t *closest_per_pixel = calloc(num_pixels, sizeof(uint8_t));
-
-        #pragma acc parallel loop copyin(centroides[0 : k]) copyout(closest_per_pixel[0 : num_pixels]) present(pixels[0 : num_pixels])
-        for (j = 0; j < num_pixels; j++)
-        {
-            closest_per_pixel[j] = find_closest_centroid(&pixels[j], centroides, k);
-        }
-        
-        for (j = 0; j < num_pixels; j++)
-        {
-            closest = closest_per_pixel[j];
-            centroides[closest].media_r += pixels[j].r;
-            centroides[closest].media_g += pixels[j].g;
-            centroides[closest].media_b += pixels[j].b;
-            centroides[closest].num_puntos++;
-        }
-
-        // Update centroids & check stop condition
-        condition = 0;
-        for (j = 0; j < k; j++)
-        {
-            if (centroides[j].num_puntos == 0)
+            // Reset centroids
+            for (j = 0; j < k; j++)
             {
-                continue;
+                centroides[j].media_r = 0;
+                centroides[j].media_g = 0;
+                centroides[j].media_b = 0;
+                centroides[j].num_puntos = 0;
             }
 
-            centroides[j].media_r = centroides[j].media_r / centroides[j].num_puntos;
-            centroides[j].media_g = centroides[j].media_g / centroides[j].num_puntos;
-            centroides[j].media_b = centroides[j].media_b / centroides[j].num_puntos;
-            changed = centroides[j].media_r != centroides[j].r || centroides[j].media_g != centroides[j].g || centroides[j].media_b != centroides[j].b;
-            condition = condition || changed;
-            centroides[j].r = centroides[j].media_r;
-            centroides[j].g = centroides[j].media_g;
-            centroides[j].b = centroides[j].media_b;
-        }
+            // Find closest cluster for each pixel
+            uint8_t *closest_per_pixel = calloc(num_pixels, sizeof(uint8_t));
 
-        i++;
-    } while (condition);
+#pragma acc parallel loop copyin(centroides[0:k]) copyout(closest_per_pixel[0:num_pixels]) present(pixels[0:num_pixels])
+            for (j = 0; j < num_pixels; j++)
+            {
+                closest_per_pixel[j] = find_closest_centroid(&pixels[j], centroides, k);
+            }
+
+            for (j = 0; j < num_pixels; j++)
+            {
+                closest = closest_per_pixel[j];
+                centroides[closest].media_r += pixels[j].r;
+                centroides[closest].media_g += pixels[j].g;
+                centroides[closest].media_b += pixels[j].b;
+                centroides[closest].num_puntos++;
+            }
+
+            // Update centroids & check stop condition
+            condition = 0;
+            for (j = 0; j < k; j++)
+            {
+                if (centroides[j].num_puntos == 0)
+                {
+                    continue;
+                }
+
+                centroides[j].media_r = centroides[j].media_r / centroides[j].num_puntos;
+                centroides[j].media_g = centroides[j].media_g / centroides[j].num_puntos;
+                centroides[j].media_b = centroides[j].media_b / centroides[j].num_puntos;
+                changed = centroides[j].media_r != centroides[j].r || centroides[j].media_g != centroides[j].g || centroides[j].media_b != centroides[j].b;
+                condition = condition || changed;
+                centroides[j].r = centroides[j].media_r;
+                centroides[j].g = centroides[j].media_g;
+                centroides[j].b = centroides[j].media_b;
+            }
+
+            i++;
+        } while (condition);
+    }
     printf("Number of K-Means iterations: %d\n\n", i);
 }
