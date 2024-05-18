@@ -253,7 +253,11 @@ void kmeans(uint8_t k, cluster *centroides, uint32_t num_pixels, rgb *pixels)
 
         // Find closest cluster for each pixel
         uint8_t *closest_per_pixel = calloc(num_pixels, sizeof(uint8_t));
-
+        uint32_t*red=calloc(k,sizeof(uint32_t));
+        uint32_t*green=calloc(k,sizeof(uint32_t));
+        uint32_t*blue=calloc(k,sizeof(uint32_t));
+        uint32_t*points=calloc(k,sizeof(uint32_t));
+        
         #pragma acc data copyin(centroides[0 : k], pixels[0 : num_pixels]) copyout(closest_per_pixel[0 : num_pixels])
         {
             #pragma acc parallel loop
@@ -262,19 +266,32 @@ void kmeans(uint8_t k, cluster *centroides, uint32_t num_pixels, rgb *pixels)
                 closest_per_pixel[j] = find_closest_centroid(&pixels[j], centroides, k);
             }
         }
-        
-        free(closest_per_pixel);
 
-        
+        #pragma acc parallel loop reduction(+:red[:k],green[:k],blue[:k],points[:k])
         for (j = 0; j < num_pixels; j++)
         {
             closest = closest_per_pixel[j];
-            centroides[closest].media_r += pixels[j].r;
-            centroides[closest].media_g += pixels[j].g;
-            centroides[closest].media_b += pixels[j].b;
-            centroides[closest].num_puntos++;
+            red[closest]+=pixels[j].r;
+            green[closest]+=pixels[j].g;
+            blue[closest]+=pixels[j].b;
+            points[closest]++;
         }
 
+        free(closest_per_pixel);
+
+        for(i=0; i<k; i++)
+        {
+            centroides[i].media_r=red[i];
+            centroides[i].media_g=green[i];
+            centroides[i].media_b=blue[i];
+            centroides[i].num_puntos=points[i];
+        }
+
+        free(red);
+        free(green);
+        free(blue);
+        free(points);
+        
         // Update centroids & check stop condition
         condition = 0;
         for (j = 0; j < k; j++)
