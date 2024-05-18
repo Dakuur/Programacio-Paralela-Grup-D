@@ -262,7 +262,10 @@ void kmeans(uint8_t k, cluster *centroides, uint32_t num_pixels, rgb *pixels)
                 closest_per_pixel[j] = find_closest_centroid(&pixels[j], centroides, k);
             }
         }
+        
+        free(closest_per_pixel);
 
+        
         for (j = 0; j < num_pixels; j++)
         {
             closest = closest_per_pixel[j];
