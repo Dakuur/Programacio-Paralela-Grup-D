@@ -237,133 +237,139 @@ void kmeans(uint8_t k, cluster *centroides, uint32_t num_pixels, rgb *pixels)
 	// K-means iterative procedures start
 	printf("STEP 3: Updating centroids\n\n");
 	i = 0;
-	do
+//#pragma acc data copyin(pixels[0 : num_pixels])
 	{
-		// Reset centroids
-		for (j = 0; j < k; j++)
+		do
 		{
-			centroides[j].media_r = 0;
-			centroides[j].media_g = 0;
-			centroides[j].media_b = 0;
-			centroides[j].num_puntos = 0;
-		}
-
-		/*---------------------------------------------------------------------*/
-		//							   CODI MODIFICAT
-		/*---------------------------------------------------------------------*/
-
-		// Find closest cluster for each pixel
-
-		// Inicialitzem les variables auxiliars que farem servir amb calloc()
-		// Tots els valors per cada cluster a 0 (R, G, B i points)
-		// printf("Informació del codi modificat:\n");
-		// printf("	Declarant variables...\n");
-
-		uint32_t red, green, blue, points = 0;
-
-		// uint8_t *closest_per_pixel = calloc(num_pixels, sizeof(uint8_t));
-		uint32_t **pixels_per_cluster = malloc(k * sizeof(uint8_t *));
-		for (int i = 0; i < k; i++)
-		{
-			pixels_per_cluster[i] = calloc(num_pixels, sizeof(uint32_t));
-		}
-		uint32_t *counters = calloc(k, sizeof(uint32_t));
-
-		uint32_t *current_pixels = malloc(sizeof(uint32_t) * num_pixels);
-		uint32_t num_current_pixels = 0;
-		uint32_t p = 0;
-
-		// Calculem el clúster més proper per a cada píxel i els pixels per clúster
-		// #pragma acc data copyin(pixels[0:num_pixels], centroides[0:k], pixels_per_cluster[0:k][0:num_pixels], counters[0:k]) copyout(pixels_per_cluster[0:k][0:num_pixels], counters[0:k])
-		{
-			//#pragma acc parallel loop private(closest)
-			for (p = 0; p < num_pixels; p++)
+			// Reset centroids
+			for (j = 0; j < k; j++)
 			{
-				closest = find_closest_centroid(&pixels[p], centroides, k);
-				pixels_per_cluster[closest][counters[closest]] = p;
-				counters[closest]++;
-				// closest_per_pixel[p] = closest;
+				centroides[j].media_r = 0;
+				centroides[j].media_g = 0;
+				centroides[j].media_b = 0;
+				centroides[j].num_puntos = 0;
 			}
-		}
 
-		/*
-		for (int c = 0; c < k; c++)
-		{
-			printf("	Clúster %d: %d píxels\n", c, counters[c]);
-		}
-		*/
+			/*---------------------------------------------------------------------*/
+			//							   CODI MODIFICAT
+			/*---------------------------------------------------------------------*/
 
-		// printf("	Inicialitzats %d clústers i %d píxels\n", k, num_pixels);
+			// Find closest cluster for each pixel
 
-		// Calculem els valors de les variables auxiliars donats els clústers més propers per a cada píxel
-		// #pragma acc data copyin(pixels_per_cluster[0:k][0:num_pixels], pixels[0:num_pixels], centroides[0:k], counters[0:k])
-		{
-			// #pragma acc parallel loop
-			for (int c = 0; c < k; c++) // Per cada clúster obtingut
+			// Inicialitzem les variables auxiliars que farem servir amb calloc()
+			// Tots els valors per cada cluster a 0 (R, G, B i points)
+			// printf("Informació del codi modificat:\n");
+			// printf("	Declarant variables...\n");
+
+			uint32_t red, green, blue, points = 0;
+
+			// uint8_t *closest_per_pixel = calloc(num_pixels, sizeof(uint8_t));
+			uint32_t **pixels_per_cluster = malloc(k * sizeof(uint8_t *));
+			for (int i = 0; i < k; i++)
 			{
-				uint32_t *current_pixels = pixels_per_cluster[c];
-				uint32_t num_current_pixels = counters[c];
-				uint32_t red = 0, green = 0, blue = 0;
+				pixels_per_cluster[i] = calloc(num_pixels, sizeof(uint32_t));
+			}
+			uint32_t *counters = calloc(k, sizeof(uint32_t));
 
-				// #pragma acc parallel loop reduction(+: red, green, blue) private(p, j)
-				for (int j = 0; j < num_current_pixels; j++) // Per cada píxel del clúster
+			uint32_t *current_pixels = malloc(sizeof(uint32_t) * num_pixels);
+			uint32_t num_current_pixels = 0;
+			uint32_t p = 0;
+
+// Calculem el clúster més proper per a cada píxel i els pixels per clúster
+//#pragma acc data copyin(centroides[0 : k]) copyout(pixels_per_cluster[0 : k][0 : num_pixels], counters[0 : k]) present(pixels[0 : num_pixels])
+			{
+
+//#pragma acc parallel loop private(closest, counters[0 : k])
+				for (p = 0; p < num_pixels; p++)
 				{
-					p = current_pixels[j];
-					red += pixels[p].r;
-					green += pixels[p].g;
-					blue += pixels[p].b;
-					// points++; Es pot ometre, ja que ja tenim el nombre de punts per clúster
+					closest = find_closest_centroid(&pixels[p], centroides, k);
+					pixels_per_cluster[closest][counters[closest]] = p;
+					#pragma acc atomic update
+					counters[closest]++;
+					
+					// closest_per_pixel[p] = closest;
+				}
+			}
+
+			/*
+			for (int c = 0; c < k; c++)
+			{
+				printf("	Clúster %d: %d píxels\n", c, counters[c]);
+			}
+			*/
+
+			// printf("	Inicialitzats %d clústers i %d píxels\n", k, num_pixels);
+
+			// Calculem els valors de les variables auxiliars donats els clústers més propers per a cada píxel
+			// #pragma acc data copyin(pixels_per_cluster[0:k][0:num_pixels], pixels[0:num_pixels], centroides[0:k], counters[0:k])
+			{
+				// #pragma acc parallel loop
+				for (int c = 0; c < k; c++) // Per cada clúster obtingut
+				{
+					uint32_t *current_pixels = pixels_per_cluster[c];
+					uint32_t num_current_pixels = counters[c];
+					uint32_t red = 0, green = 0, blue = 0;
+
+					// #pragma acc parallel loop reduction(+: red, green, blue) private(p, j)
+					for (int j = 0; j < num_current_pixels; j++) // Per cada píxel del clúster
+					{
+						p = current_pixels[j];
+						red += pixels[p].r;
+						green += pixels[p].g;
+						blue += pixels[p].b;
+						// points++; Es pot ometre, ja que ja tenim el nombre de punts per clúster
+					}
+
+					// Actualitzem els valors dels centroides (k iteracions, nombre baix i no cal paral·lelitzar)
+					centroides[c].media_r = red;
+					centroides[c].media_g = green;
+					centroides[c].media_b = blue;
+					centroides[c].num_puntos = num_current_pixels;
+				}
+			}
+
+			/*
+			// Alliberem la memòria de les variables auxiliars
+			free(red);
+			free(green);
+			free(blue);
+			free(points);
+			free(closest_per_pixel);
+
+			for(int i = 0; i < k; i++)
+			{
+				free(pixels_per_cluster[i]);
+			}
+			free(pixels_per_cluster);
+			free(counters);
+			printf("	Memòria alliberada\n\n");
+			*/
+
+			/*---------------------------------------------------------------------*/
+			//							FI CODI MODIFICAT
+			/*---------------------------------------------------------------------*/
+
+			// Update centroids & check stop condition
+			condition = 0;
+			for (j = 0; j < k; j++)
+			{
+				if (centroides[j].num_puntos == 0)
+				{
+					continue;
 				}
 
-				// Actualitzem els valors dels centroides (k iteracions, nombre baix i no cal paral·lelitzar)
-				centroides[c].media_r = red;
-				centroides[c].media_g = green;
-				centroides[c].media_b = blue;
-				centroides[c].num_puntos = num_current_pixels;
-			}
-		}
-
-		/*
-		// Alliberem la memòria de les variables auxiliars
-		free(red);
-		free(green);
-		free(blue);
-		free(points);
-		free(closest_per_pixel);
-
-		for(int i = 0; i < k; i++)
-		{
-			free(pixels_per_cluster[i]);
-		}
-		free(pixels_per_cluster);
-		free(counters);
-		printf("	Memòria alliberada\n\n");
-		*/
-
-		/*---------------------------------------------------------------------*/
-		//							FI CODI MODIFICAT
-		/*---------------------------------------------------------------------*/
-
-		// Update centroids & check stop condition
-		condition = 0;
-		for (j = 0; j < k; j++)
-		{
-			if (centroides[j].num_puntos == 0)
-			{
-				continue;
+				centroides[j].media_r = centroides[j].media_r / centroides[j].num_puntos;
+				centroides[j].media_g = centroides[j].media_g / centroides[j].num_puntos;
+				centroides[j].media_b = centroides[j].media_b / centroides[j].num_puntos;
+				changed = centroides[j].media_r != centroides[j].r || centroides[j].media_g != centroides[j].g || centroides[j].media_b != centroides[j].b;
+				condition = condition || changed;
+				centroides[j].r = centroides[j].media_r;
+				centroides[j].g = centroides[j].media_g;
+				centroides[j].b = centroides[j].media_b;
 			}
 
-			centroides[j].media_r = centroides[j].media_r / centroides[j].num_puntos;
-			centroides[j].media_g = centroides[j].media_g / centroides[j].num_puntos;
-			centroides[j].media_b = centroides[j].media_b / centroides[j].num_puntos;
-			changed = centroides[j].media_r != centroides[j].r || centroides[j].media_g != centroides[j].g || centroides[j].media_b != centroides[j].b;
-			condition = condition || changed;
-			centroides[j].r = centroides[j].media_r;
-			centroides[j].g = centroides[j].media_g;
-			centroides[j].b = centroides[j].media_b;
-		}
-
-		i++;
-	} while (condition);
+			i++;
+		} while (condition);
+	}
 	printf("Number of K-Means iterations: %d\n\n", i);
 }
