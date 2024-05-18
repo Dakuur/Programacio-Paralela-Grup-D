@@ -254,7 +254,6 @@ void kmeans(uint8_t k, cluster *centroides, uint32_t num_pixels, rgb *pixels)
         // Find closest cluster for each pixel
         uint8_t *closest_per_pixel = calloc(num_pixels, sizeof(uint8_t));
 
-        
         #pragma acc data copyin(centroides[0 : k], pixels[0 : num_pixels]) copyout(closest_per_pixel[0 : num_pixels])
         {
             #pragma acc parallel loop
@@ -265,16 +264,13 @@ void kmeans(uint8_t k, cluster *centroides, uint32_t num_pixels, rgb *pixels)
         }
 
         for (j = 0; j < num_pixels; j++)
-        {    
+        {
             closest = closest_per_pixel[j];
             centroides[closest].media_r += pixels[j].r;
-			centroides[closest].media_g += pixels[j].g;
-			centroides[closest].media_b += pixels[j].b;
-			centroides[closest].num_puntos++;
-
+            centroides[closest].media_g += pixels[j].g;
+            centroides[closest].media_b += pixels[j].b;
+            centroides[closest].num_puntos++;
         }
-
-        free(closest_per_pixel);
 
         // Update centroids & check stop condition
         condition = 0;
