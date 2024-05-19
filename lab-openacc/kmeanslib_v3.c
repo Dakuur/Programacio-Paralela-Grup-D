@@ -247,6 +247,7 @@ void kmeans(uint8_t k, cluster *centroides, uint32_t num_pixels, rgb *pixels)
 #pragma acc data create(red[0 : k], green[0 : k], blue[0 : k], points[0 : k]) copy(pixels[0 : num_pixels], centroides[0 : k])
     do
     {
+
 // Reset centroids
 #pragma acc parallel loop
         for (j = 0; j < k; j++)
@@ -276,6 +277,7 @@ void kmeans(uint8_t k, cluster *centroides, uint32_t num_pixels, rgb *pixels)
                     closest = c;
                 }
             }
+            
 // Accumulate sums
 #pragma acc atomic update
             red[closest] += pixels[j].r;
