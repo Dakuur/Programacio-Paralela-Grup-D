@@ -277,8 +277,7 @@ void kmeans(uint8_t k, cluster *centroides, uint32_t num_pixels, rgb *pixels)
                     closest = c;
                 }
             }
-            
-// Accumulate sums
+
 #pragma acc atomic update
             red[closest] += pixels[j].r;
 #pragma acc atomic update
