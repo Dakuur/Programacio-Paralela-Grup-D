@@ -289,25 +289,25 @@ void kmeans(uint8_t k, cluster *centroides, uint32_t num_pixels, rgb *pixels)
 
         // Update centroids & check stop condition
         condition = 0;
+        int next_red, next_green, next_blue, changed;
 #pragma acc parallel loop present(red, green, blue, points, centroides)
         for (j = 0; j < k; j++)
         {
             if (points[j] > 0)
             {
-                uint32_t new_r = red[j] / points[j];
-                uint32_t new_g = green[j] / points[j];
-                uint32_t new_b = blue[j] / points[j];
-                uint8_t changed = (centroides[j].r != new_r || centroides[j].g != new_g || centroides[j].b != new_b);
+                next_red = red[j] / points[j];
+                next_green = green[j] / points[j];
+                next_blue = blue[j] / points[j];
+                changed = (centroides[j].r != next_red || centroides[j].g != next_green || centroides[j].b != next_blue);
                 if (changed)
                     condition = 1;
-                centroides[j].r = new_r;
-                centroides[j].g = new_g;
-                centroides[j].b = new_b;
+                centroides[j].r = next_red;
+                centroides[j].g = next_green;
+                centroides[j].b = next_blue;
             }
         }
 
         i++;
     } while (condition);
-
     printf("Number of K-Means iterations: %d\n\n", i);
 }
