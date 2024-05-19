@@ -239,32 +239,33 @@ void kmeans(uint8_t k, cluster *centroides, uint32_t num_pixels, rgb *pixels)
     printf("STEP 3: Updating centroids\n\n");
     i = 0;
 
-    uint32_t temp_media_r[k];
-    uint32_t temp_media_g[k];
-    uint32_t temp_media_b[k];
-    uint32_t temp_num_puntos[k];
+    uint32_t red[k];
+    uint32_t green[k];
+    uint32_t blue[k];
+    uint32_t points[k];
 
-#pragma acc data copy(centroides[0 : k], pixels[0 : num_pixels]) create(temp_media_r[0 : k], temp_media_g[0 : k], temp_media_b[0 : k], temp_num_puntos[0 : k])
+#pragma acc data create(red[0 : k], green[0 : k], blue[0 : k], points[0 : k]) copy(pixels[0 : num_pixels], centroides[0 : k])
     do
     {
 // Reset centroids
 #pragma acc parallel loop
         for (j = 0; j < k; j++)
         {
-            temp_media_r[j] = 0;
-            temp_media_g[j] = 0;
-            temp_media_b[j] = 0;
-            temp_num_puntos[j] = 0;
+            red[j] = 0;
+            green[j] = 0;
+            blue[j] = 0;
+            points[j] = 0;
         }
 
 // Find closest cluster for each pixel
-#pragma acc parallel loop present(centroides, pixels, temp_media_r, temp_media_g, temp_media_b, temp_num_puntos)
+#pragma acc parallel loop present(red, green, blue, points, centroides, pixels)
         for (j = 0; j < num_pixels; j++)
         {
             uint32_t min_dist = UINT32_MAX;
             uint8_t closest = 0;
             for (uint8_t c = 0; c < k; c++)
             {
+
                 int16_t diffR = centroides[c].r - pixels[j].r;
                 int16_t diffG = centroides[c].g - pixels[j].g;
                 int16_t diffB = centroides[c].b - pixels[j].b;
@@ -277,25 +278,25 @@ void kmeans(uint8_t k, cluster *centroides, uint32_t num_pixels, rgb *pixels)
             }
 // Accumulate sums
 #pragma acc atomic update
-            temp_media_r[closest] += pixels[j].r;
+            red[closest] += pixels[j].r;
 #pragma acc atomic update
-            temp_media_g[closest] += pixels[j].g;
+            green[closest] += pixels[j].g;
 #pragma acc atomic update
-            temp_media_b[closest] += pixels[j].b;
+            blue[closest] += pixels[j].b;
 #pragma acc atomic update
-            temp_num_puntos[closest]++;
+            points[closest]++;
         }
 
         // Update centroids & check stop condition
         condition = 0;
-#pragma acc parallel loop reduction(| : condition) present(centroides, temp_media_r, temp_media_g, temp_media_b, temp_num_puntos)
+#pragma acc parallel loop present(red, green, blue, points, centroides)
         for (j = 0; j < k; j++)
         {
-            if (temp_num_puntos[j] > 0)
+            if (points[j] > 0)
             {
-                uint32_t new_r = temp_media_r[j] / temp_num_puntos[j];
-                uint32_t new_g = temp_media_g[j] / temp_num_puntos[j];
-                uint32_t new_b = temp_media_b[j] / temp_num_puntos[j];
+                uint32_t new_r = red[j] / points[j];
+                uint32_t new_g = green[j] / points[j];
+                uint32_t new_b = blue[j] / points[j];
                 uint8_t changed = (centroides[j].r != new_r || centroides[j].g != new_g || centroides[j].b != new_b);
                 if (changed)
                     condition = 1;
