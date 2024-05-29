@@ -88,7 +88,7 @@ int main(int argc, char** argv) {
 
     // Main loop: iterate until error <= tol a maximum of iter_max iterations
     while (error > tol && iter < iter_max) {
-        // Exchange boundary rows with neighboring processes
+        // Send top and bottom rows with neighboring processes
         if (rank > 0) {
             MPI_Send(&A[start_row * m], m, MPI_FLOAT, rank - 1, 0, MPI_COMM_WORLD);
             MPI_Recv(&A[(start_row - 1) * m], m, MPI_FLOAT, rank - 1, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
