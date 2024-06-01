@@ -105,7 +105,7 @@ int main(int argc, char** argv) {
         // Copy from auxiliary matrix to main matrix
         laplace_copy(Anew, A, start_row, end_row, m);
 
-        // Reduce the error across all processes
+        // Reduce the error of all nodes
         MPI_Allreduce(&local_error, &error, 1, MPI_FLOAT, MPI_MAX, MPI_COMM_WORLD);
 
         // if number of iterations is multiple of 10 then print error on the screen
