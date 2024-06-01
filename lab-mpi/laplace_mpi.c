@@ -58,6 +58,9 @@ int main(int argc, char** argv) {
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     MPI_Comm_size(MPI_COMM_WORLD, &world_size);
 
+    // Start timer
+    start_time = MPI_Wtime();
+
     // get runtime arguments: n, m and iter_max
     if (argc > 1) { n = atoi(argv[1]); }
     if (argc > 2) { m = atoi(argv[2]); }
@@ -80,9 +83,6 @@ int main(int argc, char** argv) {
         printf("Jacobi relaxation Calculation: %d rows x %d columns mesh, maximum of %d iterations\n",
                n, m, iter_max);
     }
-
-    // Start timer
-    start_time = MPI_Wtime();
 
     // Main loop: iterate until error <= tol a maximum of iter_max iterations
     while (error > tol && iter < iter_max) {
