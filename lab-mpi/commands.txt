@@ -1,7 +1,0 @@
-Sequential:
-
-sbatch mpi.sub -seq 4096 4096 100
-
-Parallel:
-
-sbatch mpi.sub -par 8 4096 4096 100
