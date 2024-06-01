@@ -63,9 +63,9 @@ int main(int argc, char** argv) {
     if (argc > 2) { m = atoi(argv[2]); }
     if (argc > 3) { iter_max = atoi(argv[3]); }
 
-    int rows_per_process = n / world_size;
-    int start_row = rank * rows_per_process + 1;
-    int end_row = (rank + 1) * rows_per_process;
+    int rows_per_node = n / world_size;
+    int start_row = rank * rows_per_node + 1;
+    int end_row = (rank + 1) * rows_per_node;
 
     if (rank == world_size - 1) end_row = n - 1;
 
@@ -80,8 +80,6 @@ int main(int argc, char** argv) {
         printf("Jacobi relaxation Calculation: %d rows x %d columns mesh, maximum of %d iterations\n",
                n, m, iter_max);
     }
-
-    MPI_Barrier(MPI_COMM_WORLD);
 
     // Start timer
     start_time = MPI_Wtime();
