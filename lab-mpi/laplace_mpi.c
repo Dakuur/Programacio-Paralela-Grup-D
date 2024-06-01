@@ -69,6 +69,7 @@ int main(int argc, char** argv) {
     int rows_per_node = n / world_size;
     int start_row = rank * rows_per_node + 1;
     int end_row = (rank + 1) * rows_per_node;
+    float local_error;
 
     if (rank == world_size - 1) end_row = n - 1;
 
@@ -100,7 +101,7 @@ int main(int argc, char** argv) {
         laplace_step(A, Anew, start_row, end_row, m);
 
         // Compute error = maximum of the square root of the absolute differences
-        float local_error = laplace_error(A, Anew, start_row, end_row, m);
+        local_error = laplace_error(A, Anew, start_row, end_row, m);
 
         // Copy from auxiliary matrix to main matrix
         laplace_copy(Anew, A, start_row, end_row, m);
